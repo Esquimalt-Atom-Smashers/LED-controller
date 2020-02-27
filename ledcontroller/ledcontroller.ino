@@ -1,7 +1,10 @@
 typedef struct
 {
     int port;
+    int multiplierPot;
+    
     double value;
+    double multiplier;
     double ledmin;
     double ledmax;
     double ledincrease;
@@ -15,6 +18,7 @@ ledchannel *green;
 
 
 double lastTime;
+int fadeSyncSwitch;
 
 
 void setup() 
@@ -23,14 +27,20 @@ void setup()
   blue = (ledchannel *) malloc(sizeof(ledchannel));
   green = (ledchannel *) malloc(sizeof(ledchannel));
 
-  initChannel(red, 0.2, 1, 1000, 1, 1, 3);
-  initChannel(green, 0, 0, 0, 0, 0, 5); //target color no blue
-  initChannel(blue, 0.2, 1, 1000, 1, 1, 6);
+  initChannel(red, 0 , 1, 1500, 1, 1, 3,1);
+  initChannel(green, 0, 0, 200, 1, 1, 5,0); //target color no blue
+  initChannel(blue, 0, 1, 1500, 1, 1, 6,0);
   lastTime = millis();
+  Serial.begin(9600);
 }
 
 
-void initChannel(ledchannel * channel, double ledmin, double ledmax, double fadetime, double leddirection, double value, int port)
+float mapfloat(long x, long in_min, long in_max, long out_min, long out_max)
+{
+ return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
+}
+
+void initChannel(ledchannel * channel, double ledmin, double ledmax, double fadetime, double leddirection, double value, int port, double multiplier)
 {
   channel->port = port;
   channel->value = value;
@@ -38,6 +48,7 @@ void initChannel(ledchannel * channel, double ledmin, double ledmax, double fade
   channel->ledmin = ledmin;
   channel->ledmax = ledmax;
   channel->leddirection = leddirection;
+  channel->multiplier = multiplier;
   channel->ledincrease = (ledmax - ledmin)/fadetime;
   pinMode(port, OUTPUT);
 }
@@ -58,7 +69,8 @@ void updateChannel(double deltat, ledchannel *channel)
     channel->leddirection *= -1.0;
   }
 
-  analogWrite(channel->port, (int)(channel->value * 255));
+  analogWrite(channel->port, (int)(channel->value * 255 * channel->multiplier));
+
 }
 
 
@@ -70,4 +82,8 @@ void loop()
   updateChannel(deltat, red);
   updateChannel(deltat, green);
   updateChannel(deltat, blue);
+
+  double r = analogRead(0);
+  red->multiplier = mapfloat(r,0,1023,0,1);
+ 
 }
